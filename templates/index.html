@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 政企管理系统{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">欢迎使用政企管理系统</h1>
+        <p class="hero-description">基于Flask + ayu组件构建的企业级管理系统</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">进入仪表板</a>
+            <a href="#features" class="btn btn-secondary">了解功能</a>
+        </div>
+    </div>
+</div>
+
+<section id="features" class="features-section">
+    <div class="container">
+        <h2 class="section-title">系统特色</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">👥</div>
+                <h3>用户管理</h3>
+                <p>完善的用户权限管理系统，支持角色分配和权限控制</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏢</div>
+                <h3>部门管理</h3>
+                <p>灵活的组织架构管理，支持多级部门设置和人员分配</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>项目管理</h3>
+                <p>完整的项目生命周期管理，从立项到完成的全流程跟踪</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>数据统计</h3>
+                <p>丰富的图表和报表功能，帮助企业进行数据分析和决策</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="tech-section">
+    <div class="container">
+        <h2 class="section-title">技术栈</h2>
+        <div class="tech-grid">
+            <div class="tech-item">
+                <span class="tech-label">后端框架</span>
+                <span class="tech-value">Flask</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-label">前端组件</span>
+                <span class="tech-value">ayu</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-label">数据库</span>
+                <span class="tech-value">SQLite</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-label">编程语言</span>
+                <span class="tech-value">Python 3</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

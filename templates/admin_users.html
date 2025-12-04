@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}用户管理 - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="layui-card">
+    <div class="layui-card-header">
+        <span>用户管理</span>
+        <div class="layui-btn-group layui-inline" style="float: right;">
+            <button class="layui-btn layui-btn-normal" onclick="addUser()">
+                <i class="layui-icon layui-icon-add-1"></i> 添加用户
+            </button>
+        </div>
+    </div>
+    <div class="layui-card-body">
+        <!-- 搜索和筛选 -->
+        <div class="layui-form layui-form-pane">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">用户名</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="username" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">角色</label>
+                    <div class="layui-input-inline">
+                        <select name="role">
+                            <option value="">全部</option>
+                            <option value="admin">管理员</option>
+                            <option value="user">普通用户</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="layui-btn layui-btn-primary" lay-submit lay-filter="search">
+                        <i class="layui-icon layui-icon-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户列表 -->
+        <table class="layui-table" lay-filter="userTable">
+            <colgroup>
+                <col width="20%">
+                <col width="15%">
+                <col width="15%">
+                <col width="20%">
+                <col width="15%">
+                <col width="15%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>最后登录</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>
+                        {% if user.role == 'admin' %}
+                        <span class="layui-badge layui-bg-orange">管理员</span>
+                        {% else %}
+                        <span class="layui-badge layui-bg-blue">普通用户</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="layui-badge layui-bg-green">正常</span>
+                        {% else %}
+                        <span class="layui-badge layui-bg-gray">禁用</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '从未登录' }}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <div class="layui-btn-group">
+                            <button class="layui-btn layui-btn-xs layui-btn-normal" onclick="editUser({{ user.id }})">
+                                <i class="layui-icon layui-icon-edit"></i> 编辑
+                            </button>
+                            {% if user.id != current_user.id %}
+                            <button class="layui-btn layui-btn-xs layui-btn-warm" onclick="toggleUserStatus({{ user.id }}, {{ 'false' if user.is_active else 'true' }})">
+                                <i class="layui-icon layui-icon-{{ 'pause' if user.is_active else 'play' }}"></i> {{ '禁用' if user.is_active else '启用' }}
+                            </button>
+                            <button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteUser({{ user.id }})">
+                                <i class="layui-icon layui-icon-delete"></i> 删除
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #999;">
+                        <i class="layui-icon layui-icon-user" style="font-size: 48px;"></i>
+                        <p style="margin-top: 10px;">暂无用户数据</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- 分页 -->
+        <div id="pageDemo" style="text-align: center;"></div>
+    </div>
+</div>
+
+<!-- 添加/编辑用户弹窗 -->
+<div id="userForm" style="display: none; padding: 20px;">
+    <form class="layui-form" lay-filter="userForm">
+        <div class="layui-form-item">
+            <label class="layui-form-label">用户名</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        
+        <div class="layui-form-item">
+            <label class="layui-form-label">密码</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" lay-verify="required" placeholder="请输入密码" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        
+        <div class="layui-form-item">
+            <label class="layui-form-label">确认密码</label>
+            <div class="layui-input-block">
+                <input type="password" name="confirm_password" lay-verify="required" placeholder="请确认密码" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色</label>
+            <div class="layui-input-block">
+                <input type="radio" name="role" value="user" title="普通用户" checked>
+                <input type="radio" name="role" value="admin" title="管理员">
+            </div>
+        </div>
+        
+        <div class="layui-form-item">
+            <label class="layui-form-label">状态</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="is_active" lay-skin="switch" lay-text="启用|禁用" checked>
+            </div>
+        </div>
+        
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="userSubmit">提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['form', 'layer', 'laypage'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                var laypage = layui.laypage;
+                
+                // 初始化分页
+                laypage.render({
+                    elem: 'pageDemo',
+                    count: {{ users|length }},
+                    limit: 10,
+                    layout: ['count', 'prev', 'page', 'next', 'limit', 'skip'],
+                    jump: function(obj){
+                        // 模拟分页数据加载
+                        console.log('分页跳转', obj);
+                    }
+                });
+                
+                // 搜索功能
+                form.on('submit(search)', function(data){
+                    layer.msg('搜索功能开发中...', {icon: 1});
+                    return false;
+                });
+                
+                // 用户表单提交
+                form.on('submit(userSubmit)', function(data){
+                    // 验证密码确认
+                    if (data.field.password !== data.field.confirm_password) {
+                        layer.msg('两次输入的密码不一致', {icon: 2});
+                        return false;
+                    }
+                    
+                    // 显示加载动画
+                    var index = layer.msg('正在保存用户信息...', {icon: 16, shade: 0.3, time: 0});
+                    
+                    setTimeout(function(){
+                        layer.close(index);
+                        layer.msg('用户保存成功', {icon: 1});
+                        layer.closeAll('page');
+                        
+                        // 模拟页面刷新
+                        setTimeout(function(){
+                            location.reload();
+                        }, 1000);
+                        
+                    }, 1500);
+                    
+                    return false;
+                });
+            });
+        });
+
+// 添加用户
+function addUser() {
+    layer.open({
+        type: 1,
+        title: '添加用户',
+        area: ['500px', '400px'],
+        content: $('#userForm').html()
+    });
+    
+    // 重新渲染表单
+    layui.form.render();
+}
+
+// 编辑用户
+function editUser(userId) {
+    // 模拟获取用户数据
+    var userData = {
+        username: 'testuser',
+        role: 'user',
+        is_active: true
+    };
+    
+    layer.open({
+        type: 1,
+        title: '编辑用户',
+        area: ['500px', '400px'],
+        content: $('#userForm').html()
+    });
+    
+    // 填充表单数据
+    layui.form.val('userForm', userData);
+    
+    // 重新渲染表单
+    layui.form.render();
+}
+
+// 切换用户状态
+function toggleUserStatus(userId, newStatus) {
+    var action = newStatus ? '启用' : '禁用';
+    layer.confirm('确定要' + action + '这个用户吗？', {
+        icon: 3,
+        title: '状态变更确认'
+    }, function(index){
+        layer.msg(action + '功能开发中...', {icon: 1});
+        layer.close(index);
+    });
+}
+
+// 删除用户
+function deleteUser(userId) {
+    layer.confirm('确定要删除这个用户吗？此操作不可恢复！', {
+        icon: 3,
+        title: '删除确认'
+    }, function(index){
+        layer.msg('删除功能开发中...', {icon: 1});
+        layer.close(index);
+    });
+}
+</script>
+
+<style>
+.layui-table td {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

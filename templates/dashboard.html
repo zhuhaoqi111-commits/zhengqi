@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="layui-row layui-col-space15">
+    <!-- 统计卡片 -->
+    <div class="layui-col-md4">
+        <div class="stat-card">
+            <div class="number">{{ user_count }}</div>
+            <div class="label">用户总数</div>
+        </div>
+    </div>
+    <div class="layui-col-md4">
+        <div class="stat-card">
+            <div class="number">{{ report_count }}</div>
+            <div class="label">舆情报告</div>
+        </div>
+    </div>
+    <div class="layui-col-md4">
+        <div class="stat-card">
+            <div class="number">{{ recent_reports|length }}</div>
+            <div class="label">今日报告</div>
+        </div>
+    </div>
+</div>
+
+<div class="layui-row layui-col-space15">
+    <!-- 最近报告 -->
+    <div class="layui-col-md8">
+        <div class="layui-card">
+            <div class="layui-card-header">最近舆情报告</div>
+            <div class="layui-card-body">
+                <table class="layui-table">
+                    <colgroup>
+                        <col width="60%">
+                        <col width="20%">
+                        <col width="20%">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>报告标题</th>
+                            <th>情感分析</th>
+                            <th>创建时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in recent_reports %}
+                        <tr>
+                            <td>{{ report.title }}</td>
+                            <td>
+                                {% if report.sentiment == 'positive' %}
+                                <span class="layui-badge layui-bg-green">积极</span>
+                                {% elif report.sentiment == 'negative' %}
+                                <span class="layui-badge layui-bg-red">消极</span>
+                                {% else %}
+                                <span class="layui-badge layui-bg-gray">中性</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align: center;">暂无报告数据</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 快速操作 -->
+    <div class="layui-col-md4">
+        <div class="layui-card">
+            <div class="layui-card-header">快速操作</div>
+            <div class="layui-card-body">
+                <div class="layui-btn-container" style="text-align: center;">
+                    <a href="{{ url_for('generate_opinion_report') }}" class="layui-btn layui-btn-normal layui-btn-fluid" style="margin-bottom: 10px;">
+                        <i class="layui-icon layui-icon-edit"></i> 生成舆情报告
+                    </a>
+                    <a href="{{ url_for('crawler_page') }}" class="layui-btn layui-btn-danger layui-btn-fluid" style="margin-bottom: 10px;">
+                        <i class="layui-icon layui-icon-search"></i> 数据抓取
+                    </a>
+                    <a href="{{ url_for('opinion_reports') }}" class="layui-btn layui-btn-primary layui-btn-fluid" style="margin-bottom: 10px;">
+                        <i class="layui-icon layui-icon-read"></i> 查看报告列表
+                    </a>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('admin_users') }}" class="layui-btn layui-btn-warm layui-btn-fluid" style="margin-bottom: 10px;">
+                        <i class="layui-icon layui-icon-user"></i> 用户管理
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 系统信息 -->
+        <div class="layui-card">
+            <div class="layui-card-header">系统信息</div>
+            <div class="layui-card-body">
+                <ul class="layui-timeline">
+                    <li class="layui-timeline-item">
+                        <i class="layui-icon layui-timeline-axis"></i>
+                        <div class="layui-timeline-content layui-text">
+                            <div class="layui-timeline-title">
+                                <h3>欢迎使用</h3>
+                                <p>当前用户：{{ current_user.username }}</p>
+                                <p>角色：{{ '管理员' if current_user.is_admin() else '普通用户' }}</p>
+                                <p>最后登录：{{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else '首次登录' }}</p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['element'], function(){
+                var element = layui.element;
+                
+                // 页面加载完成后初始化
+                element.init();
+            });
+        });
+    </script>
+{% endblock %}

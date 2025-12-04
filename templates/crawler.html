@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据抓取模块</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        .crawler-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .crawler-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .crawler-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .crawler-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .search-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .search-input {
+            flex: 1;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .news-card {
+            border: 1px solid #e8e8e8;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .news-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .news-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .news-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .news-title a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+        
+        .news-title a:hover {
+            text-decoration: underline;
+        }
+        
+        .news-cover {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-left: 15px;
+        }
+        
+        .news-summary {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #999;
+        }
+        
+        .news-source {
+            font-weight: bold;
+            color: #1890ff;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .btn-search {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 0 30px;
+            height: 38px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-search:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-search:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .stats-info span {
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="crawler-container">
+        <div class="crawler-header">
+            <h1><i class="fas fa-search"></i> 百度新闻数据抓取</h1>
+            <p>输入关键词，获取最新的新闻数据</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="search-form">
+                <div class="search-input">
+                    <input type="text" id="keyword" placeholder="请输入搜索关键词（如：西昌、科技、财经等）" class="layui-input" style="height: 38px;">
+                </div>
+                <button type="button" id="searchBtn" class="btn-search">
+                    <i class="fas fa-search"></i> 搜索新闻
+                </button>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <label class="layui-form-label">搜索结果数量：</label>
+                <div class="layui-input-inline" style="width: 100px;">
+                    <select id="resultCount" class="layui-select">
+                        <option value="5">5条</option>
+                        <option value="10" selected>10条</option>
+                        <option value="15">15条</option>
+                        <option value="20">20条</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <div id="statsInfo" class="stats-info" style="display: none;">
+                共找到 <span id="resultCountDisplay">0</span> 条相关新闻，抓取时间：<span id="crawlTime"></span>
+            </div>
+            
+            <div id="resultsContainer">
+                <div class="empty-state">
+                    <i class="fas fa-newspaper"></i>
+                    <p>请输入关键词开始搜索新闻数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script>
+        layui.use(['layer', 'form'], function(){
+            var layer = layui.layer;
+            var form = layui.form;
+            
+            // 搜索按钮点击事件
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                var keyword = document.getElementById('keyword').value.trim();
+                var resultCount = document.getElementById('resultCount').value;
+                
+                if (!keyword) {
+                    layer.msg('请输入搜索关键词', {icon: 2});
+                    return;
+                }
+                
+                searchNews(keyword, resultCount);
+            });
+            
+            // 回车搜索
+            document.getElementById('keyword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('searchBtn').click();
+                }
+            });
+            
+            function searchNews(keyword, count) {
+                var searchBtn = document.getElementById('searchBtn');
+                var originalText = searchBtn.innerHTML;
+                
+                // 显示加载状态
+                searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 搜索中...';
+                searchBtn.disabled = true;
+                
+                // 显示加载动画
+                var resultsContainer = document.getElementById('resultsContainer');
+                resultsContainer.innerHTML = `
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin fa-3x"></i>
+                        <p style="margin-top: 15px;">正在搜索 "${keyword}" 相关新闻...</p>
+                    </div>
+                `;
+                
+                // 隐藏统计信息
+                document.getElementById('statsInfo').style.display = 'none';
+                
+                // 发送请求
+                fetch('/api/crawler/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        keyword: keyword,
+                        max_results: parseInt(count)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 恢复按钮状态
+                    searchBtn.innerHTML = originalText;
+                    searchBtn.disabled = false;
+                    
+                    if (data.success) {
+                        displayResults(data.data, keyword);
+                    } else {
+                        layer.msg(data.message || '搜索失败', {icon: 2});
+                        resultsContainer.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p>搜索失败：${data.message || '未知错误'}</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    // 恢复按钮状态
+                    searchBtn.innerHTML = originalText;
+                    searchBtn.disabled = false;
+                    
+                    console.error('搜索错误:', error);
+                    layer.msg('搜索失败，请检查网络连接', {icon: 2});
+                    resultsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>搜索失败，请检查网络连接</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            function displayResults(newsList, keyword) {
+                var resultsContainer = document.getElementById('resultsContainer');
+                var statsInfo = document.getElementById('statsInfo');
+                
+                if (!newsList || newsList.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <p>未找到与 "${keyword}" 相关的新闻</p>
+                            <p style="font-size: 0.9rem; margin-top: 10px;">请尝试其他关键词</p>
+                        </div>
+                    `;
+                    statsInfo.style.display = 'none';
+                    return;
+                }
+                
+                // 显示统计信息
+                document.getElementById('resultCountDisplay').textContent = newsList.length;
+                document.getElementById('crawlTime').textContent = new Date().toLocaleString('zh-CN');
+                statsInfo.style.display = 'block';
+                
+                // 生成新闻卡片
+                var html = '';
+                newsList.forEach((news, index) => {
+                    var coverHtml = news.cover ? 
+                        `<img src="${news.cover}" alt="封面" class="news-cover" onerror="this.style.display='none'">` : 
+                        '<div class="news-cover" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><i class="fas fa-image" style="color: #ccc; font-size: 1.5rem;"></i></div>';
+                    
+                    html += `
+                        <div class="news-card">
+                            <div class="news-header">
+                                <div style="flex: 1;">
+                                    <div class="news-title">
+                                        <a href="${news.url}" target="_blank" title="${news.title}">
+                                            ${news.title || '无标题'}
+                                        </a>
+                                    </div>
+                                    <div class="news-summary">
+                                        ${news.summary || '暂无概要'}
+                                    </div>
+                                </div>
+                                ${coverHtml}
+                            </div>
+                            <div class="news-meta">
+                                <span class="news-source">
+                                    <i class="fas fa-newspaper"></i> ${news.source || '未知来源'}
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock"></i> ${news.crawl_time || '未知时间'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultsContainer.innerHTML = html;
+            }
+        });
+    </script>
+</body>
+</html>

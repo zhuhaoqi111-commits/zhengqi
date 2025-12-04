@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="layui-card">
+    <div class="layui-card-header">系统设置</div>
+    <div class="layui-card-body">
+        <form class="layui-form" lay-filter="settingsForm">
+            <!-- 基本设置 -->
+            <fieldset class="layui-elem-field">
+                <legend>基本设置</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">应用名称</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="app_name" value="{{ settings.app_name if settings else '政企智能舆情分析系统' }}" lay-verify="required" placeholder="请输入应用名称" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">系统版本</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="version" value="{{ settings.version if settings else '1.0.0' }}" lay-verify="required" placeholder="请输入系统版本" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">版权信息</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="copyright" value="{{ settings.copyright if settings else '© 2024 政企智能舆情分析系统' }}" lay-verify="required" placeholder="请输入版权信息" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- 舆情分析设置 -->
+            <fieldset class="layui-elem-field" style="margin-top: 20px;">
+                <legend>舆情分析设置</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">关键词提取数量</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="keyword_count" value="{{ settings.keyword_count if settings else 10 }}" lay-verify="required|number" placeholder="请输入关键词提取数量" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">情感分析阈值</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="sentiment_threshold" value="{{ settings.sentiment_threshold if settings else 0.5 }}" lay-verify="required|number" placeholder="请输入情感分析阈值" autocomplete="off" class="layui-input" step="0.1" min="0" max="1">
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">报告保存天数</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="report_keep_days" value="{{ settings.report_keep_days if settings else 30 }}" lay-verify="required|number" placeholder="请输入报告保存天数" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- 系统功能设置 -->
+            <fieldset class="layui-elem-field" style="margin-top: 20px;">
+                <legend>系统功能设置</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">用户注册</label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="allow_register" lay-skin="switch" lay-text="允许|禁止" {{ 'checked' if not settings or settings.allow_register else '' }}>
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">自动清理报告</label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="auto_clean_reports" lay-skin="switch" lay-text="开启|关闭" {{ 'checked' if not settings or settings.auto_clean_reports else '' }}>
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">邮件通知</label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" name="email_notification" lay-skin="switch" lay-text="开启|关闭" {{ 'checked' if settings and settings.email_notification else '' }}>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- 安全设置 -->
+            <fieldset class="layui-elem-field" style="margin-top: 20px;">
+                <legend>安全设置</legend>
+                <div class="layui-field-box">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">密码强度</label>
+                        <div class="layui-input-block">
+                            <select name="password_strength">
+                                <option value="low" {{ 'selected' if settings and settings.password_strength == 'low' else '' }}>弱</option>
+                                <option value="medium" {{ 'selected' if not settings or settings.password_strength == 'medium' else '' }}>中</option>
+                                <option value="high" {{ 'selected' if settings and settings.password_strength == 'high' else '' }}>强</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">会话超时(分钟)</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="session_timeout" value="{{ settings.session_timeout if settings else 30 }}" lay-verify="required|number" placeholder="请输入会话超时时间" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">登录失败锁定</label>
+                        <div class="layui-input-block">
+                            <input type="number" name="login_attempts" value="{{ settings.login_attempts if settings else 5 }}" lay-verify="required|number" placeholder="请输入最大登录失败次数" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <!-- 操作按钮 -->
+            <div class="layui-form-item" style="margin-top: 30px;">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="settingsSubmit">保存设置</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                    <button type="button" class="layui-btn layui-btn-warm" onclick="restoreDefaults()">恢复默认</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['form', 'layer'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                
+                // 表单提交
+                form.on('submit(settingsSubmit)', function(data){
+                    // 显示加载动画
+                    var index = layer.msg('正在保存系统设置...', {icon: 16, shade: 0.3, time: 0});
+                    
+                    setTimeout(function(){
+                        layer.close(index);
+                        layer.msg('系统设置保存成功', {icon: 1});
+                        
+                        // 模拟页面刷新
+                        setTimeout(function(){
+                            location.reload();
+                        }, 1000);
+                        
+                    }, 1500);
+                    
+                    return false;
+                });
+            });
+        });
+
+// 恢复默认设置
+function restoreDefaults() {
+    layer.confirm('确定要恢复默认设置吗？当前设置将被覆盖！', {
+        icon: 3,
+        title: '恢复默认确认'
+    }, function(index){
+        // 显示加载动画
+        var loading = layer.msg('正在恢复默认设置...', {icon: 16, shade: 0.3, time: 0});
+        
+        setTimeout(function(){
+            layer.close(loading);
+            layer.msg('默认设置恢复成功', {icon: 1});
+            layer.close(index);
+            
+            // 模拟页面刷新
+            setTimeout(function(){
+                location.reload();
+            }, 1000);
+            
+        }, 1500);
+    });
+}
+</script>
+
+<style>
+.layui-elem-field legend {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+.layui-field-box {
+    padding: 20px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}舆情报告列表 - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="layui-card">
+    <div class="layui-card-header">
+        <span>舆情报告列表</span>
+        <div class="layui-btn-group layui-inline" style="float: right;">
+            <a href="{{ url_for('generate_opinion_report') }}" class="layui-btn layui-btn-normal">
+                <i class="layui-icon layui-icon-add-1"></i> 生成新报告
+            </a>
+        </div>
+    </div>
+    <div class="layui-card-body">
+        <!-- 搜索和筛选 -->
+        <div class="layui-form layui-form-pane">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label">关键词</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="keyword" placeholder="请输入关键词" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <label class="layui-form-label">情感分析</label>
+                    <div class="layui-input-inline">
+                        <select name="sentiment">
+                            <option value="">全部</option>
+                            <option value="positive">积极</option>
+                            <option value="neutral">中性</option>
+                            <option value="negative">消极</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <button class="layui-btn layui-btn-primary" lay-submit lay-filter="search">
+                        <i class="layui-icon layui-icon-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 报告列表 -->
+        <table class="layui-table" lay-filter="reportTable">
+            <colgroup>
+                <col width="40%">
+                <col width="15%">
+                <col width="15%">
+                <col width="15%">
+                <col width="15%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>报告标题</th>
+                    <th>情感分析</th>
+                    <th>关键词数量</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>{{ report.title }}</td>
+                    <td>
+                        {% if report.sentiment == 'positive' %}
+                        <span class="layui-badge layui-bg-green">积极</span>
+                        {% elif report.sentiment == 'negative' %}
+                        <span class="layui-badge layui-bg-red">消极</span>
+                        {% else %}
+                        <span class="layui-badge layui-bg-gray">中性</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ report.keywords|length if report.keywords else 0 }}</td>
+                    <td>{{ report.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <div class="layui-btn-group">
+                            <button class="layui-btn layui-btn-xs layui-btn-normal" onclick="viewReport({{ report.id }})">
+                                <i class="layui-icon layui-icon-read"></i> 查看
+                            </button>
+                            <button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteReport({{ report.id }})">
+                                <i class="layui-icon layui-icon-delete"></i> 删除
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #999;">
+                        <i class="layui-icon layui-icon-template" style="font-size: 48px;"></i>
+                        <p style="margin-top: 10px;">暂无舆情报告数据</p>
+                        <a href="{{ url_for('generate_opinion_report') }}" class="layui-btn layui-btn-primary" style="margin-top: 10px;">
+                            <i class="layui-icon layui-icon-add-1"></i> 生成第一个报告
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- 分页 -->
+        <div id="pageDemo" style="text-align: center;"></div>
+    </div>
+</div>
+
+<!-- 查看报告详情弹窗 -->
+<div id="reportDetail" style="display: none; padding: 20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">
+            <h3 id="detailTitle"></h3>
+            <div class="layui-badge-container" id="detailBadges"></div>
+        </div>
+        <div class="layui-card-body">
+            <div class="layui-tab">
+                <ul class="layui-tab-title">
+                    <li class="layui-this">报告内容</li>
+                    <li>关键词分析</li>
+                    <li>情感分析</li>
+                </ul>
+                <div class="layui-tab-content">
+                    <div class="layui-tab-item layui-show">
+                        <div id="detailContent" style="line-height: 1.8;"></div>
+                    </div>
+                    <div class="layui-tab-item">
+                        <div id="detailKeywords" class="layui-badge-container"></div>
+                    </div>
+                    <div class="layui-tab-item">
+                        <div id="detailSentiment" style="text-align: center; padding: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['form', 'element', 'layer', 'laypage'], function(){
+                var form = layui.form;
+                var element = layui.element;
+                var layer = layui.layer;
+                var laypage = layui.laypage;
+                
+                // 初始化分页
+                laypage.render({
+                    elem: 'pageDemo',
+                    count: {{ reports|length }},
+                    limit: 10,
+                    layout: ['count', 'prev', 'page', 'next', 'limit', 'skip'],
+                    jump: function(obj){
+                        // 模拟分页数据加载
+                        console.log('分页跳转', obj);
+                    }
+                });
+                
+                // 搜索功能
+                form.on('submit(search)', function(data){
+                    layer.msg('搜索功能开发中...', {icon: 1});
+                    return false;
+                });
+            });
+        });
+
+// 查看报告详情
+function viewReport(reportId) {
+    // 模拟获取报告详情
+    var reportData = {
+        title: '舆情分析报告示例',
+        content: '这是一份示例舆情分析报告内容，包含了对当前舆情状况的详细分析和评估。报告基于先进的人工智能技术，对舆情数据进行了深度挖掘和分析。',
+        keywords: ['舆情', '分析', '报告', '智能', '系统', '数据'],
+        sentiment: 'positive',
+        created_at: '2024-01-01 10:00:00'
+    };
+    
+    // 更新弹窗内容
+    $('#detailTitle').text(reportData.title);
+    $('#detailContent').html('<p>' + reportData.content + '</p>');
+    $('#detailKeywords').html(reportData.keywords.map(k => 
+        '<span class="layui-badge layui-bg-blue">' + k + '</span>'
+    ).join(''));
+    $('#detailSentiment').html('<span class="layui-badge layui-bg-green" style="font-size: 16px;">积极</span>');
+    
+    // 显示弹窗
+    layer.open({
+        type: 1,
+        title: '报告详情',
+        area: ['800px', '600px'],
+        content: $('#reportDetail').html()
+    });
+}
+
+// 删除报告
+function deleteReport(reportId) {
+    layer.confirm('确定要删除这份报告吗？', {
+        icon: 3,
+        title: '删除确认'
+    }, function(index){
+        layer.msg('删除功能开发中...', {icon: 1});
+        layer.close(index);
+    });
+}
+</script>
+
+<style>
+.layui-badge-container {
+    margin: 10px 0;
+}
+.layui-badge-container .layui-badge {
+    margin: 5px;
+}
+</style>
+{% endblock %}

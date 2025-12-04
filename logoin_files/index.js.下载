@@ -1,0 +1,1227 @@
+const basePath = `${window.location.origin}`;
+const apiBasePath = `${window.location.origin}/api`;
+function getQueryParam(param) {
+  const regex = new RegExp("[?&]" + param + "=([^&]*)");
+  const match = regex.exec(window.location.href);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+const toLogin = function () {
+  const ci = getQueryParam("ci") || "gw";
+  const vi = getQueryParam("vi");
+  const queryStr = `ci=${ci}` + ((vi && `&vi=${vi}`) || "");
+  window.open(basePath + `/#/login?${queryStr}`, "_blank");
+};
+
+let isLogin = false;
+let versionInfo = 1;
+
+function showMessage(message, type = "info", duration = 3000) {
+  const messageDiv = document.createElement("div");
+  messageDiv.className = `login-message ${type}`;
+  messageDiv.textContent = message;
+
+  document.body.appendChild(messageDiv);
+
+  setTimeout(() => {
+    messageDiv.classList.add("hide");
+    setTimeout(() => {
+      document.body.removeChild(messageDiv);
+    }, 300); // 等待动画结束
+  }, duration);
+}
+function changeLoginBtnText(text) {
+  const btn = document.querySelector(".login-register-btn");
+  btn.textContent = text || "登录/注册";
+  if (text) {
+    btn.classList.add("to-project");
+  } else {
+    btn.classList.remove("to-project");
+  }
+  const avatar = document.querySelector(".user-avatar");
+  avatar.classList.toggle("hidden", !isLogin);
+}
+async function changeLoginBtn() {
+  isLogin = false;
+  try {
+    const response = await fetch(`${apiBasePath}/login/getLoginStatus`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json(); // 解析响应数据
+    if (data?.data?.loginStatus) {
+      isLogin = true;
+      if (data?.data?.username) {
+        const userAvatar = document.querySelector(".user-avatar");
+        userAvatar.innerText = data.data.username.substring(0, 1);
+        versionInfo = data.data.versionInfo || 1;
+      } else {
+        getDicProviderInfo();
+      }
+      changeLoginBtnText("工作空间");
+      return;
+    } else {
+      isLogin = false;
+      changeLoginBtnText();
+      return;
+    }
+  } catch (error) {
+    isLogin = false;
+    changeLoginBtnText();
+    console.error("Error checking login status:", error);
+    return;
+  }
+}
+async function getDicProviderInfo() {
+  try {
+    const response = await fetch(`${apiBasePath}/user/getDicProviderInfo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", // 根据实际需要设置合适的Content-Type
+      },
+      // 如果需要请求体可以添加: body: JSON.stringify(yourData)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json(); // 解析响应数据
+    if (data?.data) {
+      const userAvatar = document.querySelector(".user-avatar");
+      userAvatar.innerText = data.data.username?.substring(0, 1);
+      versionInfo = data.data.versionInfo || 1;
+      return;
+    } else {
+      return;
+    }
+  } catch (error) {
+    isLogin = false;
+    changeLoginBtnText();
+    console.error("Error checking login status:", error);
+    return;
+  }
+}
+
+
+document.addEventListener("DOMContentLoaded", async function () {
+  const header = document.getElementById("header");
+  const changeHeaderStyle = () => {
+    if (window.scrollY > 100) {
+      header.classList.add("hover");
+      header.style['background-image'] = "url(/assets/officialWebsite/header-bg.png)";
+    } else {
+      header.classList.remove("hover");
+      header.style['background-image'] = "none";
+    }
+  };
+  window.addEventListener("scroll", changeHeaderStyle);
+  changeHeaderStyle();
+
+  const navList = document.querySelectorAll(".anchor");
+  navList.forEach((nav) => {
+    nav.addEventListener("click", (e) => {
+      const dividerId = e.target.attributes["data-divider-id"];
+      if(dividerId.value) {
+        const divider = document.querySelector(`${dividerId.value}`);
+        if (divider) {
+          const top = divider.getBoundingClientRect().top
+          window.scrollTo({
+            top: top + window.scrollY,
+            behavior: "smooth",
+          });
+        }
+      }
+    });
+  })
+
+  await changeLoginBtn();
+  const textarea = document.querySelector(".ai-textarea");
+  textarea.value = "";
+  const btn = document.querySelector(".login-register-btn");
+  btn.addEventListener("click", async () => {
+    await changeLoginBtn();
+    if (isLogin) {
+      // window.open(basePath, "blank");
+      window.open(basePath + "/#/project", "_blank");
+      return;
+    }
+    toLogin();
+    return;
+  });
+
+  const toLoginbBtns = document.querySelectorAll(".to-login");
+  toLoginbBtns.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await changeLoginBtn();
+      if (isLogin) {
+        // window.open(basePath, "blank");
+        window.open(`${basePath}/#/project`, "_blank");
+        return;
+      }
+      toLogin();
+    });
+  });
+
+  let countState = "";
+  const chatFooterBtnNot = document.querySelector(".home-chat-footer-btn-not");
+
+  const chatFooterBtn = document.querySelector(".home-chat-footer-btn");
+  chatFooterBtn.addEventListener("click", async () => {
+    if (countState === "within-limits" || countState === "unlimited-nulls") {
+      await changeLoginBtn();
+      if (!isLogin) {
+        localStorage.setItem("generatetemplate", "gw");
+        localStorage.setItem("generatetemplateMsg", textarea.value);
+        toLogin();
+        return;
+      }
+      window.open(basePath + "/#/project", "_blank");
+    }
+  });
+  let chatValue = ""; //聊天文本
+  function changeChatFooterBtn(canClick) {
+    if (canClick) {
+      chatFooterBtn.classList.contains("hidden") &&
+        chatFooterBtn.classList.remove("hidden");
+      !chatFooterBtnNot.classList.contains("hidden") &&
+        chatFooterBtnNot.classList.add("hidden");
+      return;
+    }
+    chatFooterBtnNot.classList.contains("hidden") &&
+      chatFooterBtnNot.classList.remove("hidden");
+    !chatFooterBtn.classList.contains("hidden") &&
+      chatFooterBtn.classList.add("hidden");
+  }
+  textarea.addEventListener("input", (e) => {
+    const value = e.target.value;
+    chatValue = value;
+    const limitDom = document.querySelector(".word-limit");
+    limitDom.classList.remove("out-limit");
+    limitDom.classList.remove("within-limit");
+    if (chatValue.length) {
+      const currLen = limitDom.querySelector(".curr-length");
+      currLen.innerText = value.length;
+      limitDom.classList.remove("hidden");
+    } else {
+      limitDom.classList.add("hidden");
+    }
+    if (value.length && value.length > 2000) {
+      countState = "out-limit";
+      limitDom.classList.add("out-limit");
+      changeChatFooterBtn(false);
+    } else if (value.length) {
+      countState = "within-limits";
+      limitDom.classList.add("within-limit");
+      changeChatFooterBtn(true);
+    } else {
+      countState = "";
+      changeChatFooterBtn(false);
+    }
+  });
+
+  const tagList = document.querySelector(".tag-list");
+  tagList.addEventListener("click", (e) => {
+    const tagKey = e.target.attributes["data-key"];
+    if (!tagKey) return;
+    stopPlaceholderAnimation();
+    textarea.value = tagKey.value;
+    countState = "within-limits";
+    changeChatFooterBtn(true);
+
+    const limitDom = document.querySelector(".word-limit");
+    limitDom.classList.remove("out-limit");
+    limitDom.classList.add("within-limit");
+    const currLen = limitDom.querySelector(".curr-length");
+    currLen.innerText = textarea.value.length;
+    limitDom.classList.remove("hidden");
+  });
+
+  const links = document.querySelector(".links-list");
+  links.addEventListener("click", (e) => {
+    const src = e.target.attributes["data-src"];
+    if (!src) return;
+    window.open(src.value, "_blank");
+  });
+
+  const socialIcons = document.querySelectorAll(".links-list img");
+  socialIcons.forEach((img) => {
+    const originalSrc = img.src;
+    const eventKey = img.getAttribute("data-event-key");
+    // 悬停时切换为 hover 图片
+    img.addEventListener(eventKey, () => {
+      const broKey = img.getAttribute("data-bro-key");
+      img.classList.add("hidden");
+      const broNode = document.querySelector(".links-list ." + broKey);
+      broNode.classList.remove("hidden");
+    });
+  });
+
+  const foldBtn = document.querySelectorAll(".fold-p");
+  foldBtn.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const pNode = e.currentTarget.parentElement;
+      let newClass = "";
+      let oldClass = ("" && "unfold") || "fold";
+      if (pNode.classList.contains("fold")) {
+        newClass = "unfold";
+        oldClass = "fold";
+      } else {
+        oldClass = "unfold";
+        newClass = "fold";
+      }
+      pNode.classList.remove(oldClass);
+      pNode.classList.add(newClass);
+    });
+  });
+
+  const backToTopButton = document.getElementById("back-to-top");
+  const showToTop = () => {
+    if (window.scrollY > 300) {
+      backToTopButton.classList.remove("hidden");
+    } else {
+      backToTopButton.classList.add("hidden");
+    }
+  };
+  // 监听滚动事件，当滚动超过一定距离时显示按钮
+  window.addEventListener("scroll", () => {
+    showToTop();
+  });
+  showToTop();
+  // 点击按钮时平滑滚动回顶部
+  backToTopButton.addEventListener("click", () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  });
+
+  const helpDropdown = document.querySelector(".help-dropdown");
+  const helpDropdownMenu = document.querySelector(".help-dropdown-menu");
+  helpDropdown.addEventListener("click", function (event) {
+    event.stopPropagation();
+    helpDropdownMenu.classList.toggle("hidden");
+    helpDropdown.classList.toggle("active");
+  });
+  // 点击页面其他地方时关闭下拉菜单
+  document.addEventListener("click", function (event) {
+    if (
+      !helpDropdown.contains(event.target) &&
+      !helpDropdownMenu.contains(event.target)
+    ) {
+      helpDropdownMenu.classList.add("hidden");
+      helpDropdown.classList.remove("active");
+    }
+  });
+
+  const userAvatar = document.querySelector(".user-avatar");
+  const logoutBtn = document.getElementById("logout-btn");
+  const userDropdownMenu = document.querySelector(".user-dropdown-menu");
+  let userDropdownMenuTimer = null;
+  function changeUserDropdown(show) {
+    userDropdownMenuTimer && clearTimeout(userDropdownMenuTimer);
+    if (show) {
+      userDropdownMenu.classList.remove("hidden");
+      return;
+    }
+
+    userDropdownMenuTimer = setTimeout(() => {
+      userDropdownMenu.classList.add("hidden");
+    }, 200);
+  }
+
+  userAvatar.addEventListener("mouseenter", () => changeUserDropdown(true));
+  userAvatar.addEventListener("mouseleave", () => changeUserDropdown(false));
+  userDropdownMenu.addEventListener("mouseenter", () =>
+    changeUserDropdown(true)
+  );
+  userDropdownMenu.addEventListener("mouseleave", () =>
+    changeUserDropdown(false)
+  );
+  // 点击页面其他地方时关闭下拉菜单
+  document.addEventListener("click", function (event) {
+    if (
+      !userAvatar.contains(event.target) &&
+      !userDropdownMenu.contains(event.target)
+    ) {
+      changeUserDropdown(false);
+    }
+  });
+
+  // 点击退出按钮
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      const response = await fetch(`${apiBasePath}/logout`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      changeUserDropdown(false);
+      changeLoginBtn();
+    } catch (error) {
+      console.error("退出请求错误:", error);
+    }
+  });
+
+  const fakePlaceholder = document.querySelector(".fake-placeholder");
+  const fakeTextElement = document.querySelector(".fake-placeholder-text");
+  const placeholderText =
+    "简单描述您想要的界面或功能，如：设计一个库存管理系统";
+  let isAnimating = false;
+  let timer = null;
+  let timer2 = null;
+  let timer3 = null;
+  let timer4 = null;
+  let animationInterval;
+
+  // 打字动画函数（逐字出现）
+  function typeText(callback) {
+    let index = 0;
+    fakeTextElement.textContent = "";
+
+    timer3 = setInterval(() => {
+      if (index <= placeholderText.length) {
+        fakeTextElement.textContent = placeholderText.slice(0, index);
+        index++;
+      } else {
+        clearInterval(timer3);
+        callback();
+      }
+    }, 200); // 打字速度
+  }
+
+  // 删除动画函数（逐字删除）
+  function deleteText(callback) {
+    let index = placeholderText.length;
+
+    timer4 = setInterval(() => {
+      if (index >= 0) {
+        fakeTextElement.textContent = placeholderText.slice(0, index);
+        index--;
+      } else {
+        clearInterval(timer4);
+        callback();
+      }
+    }, 100); // 删除速度
+  }
+
+  // 循环执行：打字 -> 停顿 -> 删除 -> 停顿 -> 重复
+  function startPlaceholderAnimation() {
+    if (isAnimating) return;
+
+    isAnimating = true;
+    timer && clearTimeout(timer);
+    timer2 && clearTimeout(timer2);
+
+    const loop = () => {
+      typeText(() => {
+        timer = setTimeout(() => {
+          deleteText(() => {
+            timer2 = setTimeout(loop, 500); // 删除完再等 0.5s 后重新开始
+          });
+        }, 1000); // 打完文字后停顿 1s
+      });
+    };
+
+    loop();
+    fakePlaceholder.classList.remove("hidden");
+  }
+
+  // 停止动画
+  function stopPlaceholderAnimation() {
+    isAnimating = false;
+    timer && clearTimeout(timer);
+    timer2 && clearTimeout(timer2);
+    timer3 && clearInterval(timer3);
+    timer4 && clearInterval(timer4);
+    fakeTextElement.textContent = "";
+    fakePlaceholder.classList.add("hidden");
+  }
+
+  // 初始化动画
+  startPlaceholderAnimation();
+
+  // 聚焦、失焦时也控制
+  textarea.addEventListener("focus", () => {
+    textarea.classList.add("textarea-focus");
+    textarea.classList.remove("textarea-blur");
+    if (textarea.value.trim() === "") {
+      stopPlaceholderAnimation();
+    }
+  });
+
+  textarea.addEventListener("blur", () => {
+    textarea.classList.remove("textarea-focus");
+    textarea.classList.add("textarea-blur");
+    if (textarea.value.trim() === "") {
+      startPlaceholderAnimation();
+    }
+  });
+  // 初始化产品定价模块
+  await initPricingModule();
+});
+
+
+const staticBasePath = '/public/assets/officialWebsite'
+const staticSources = [
+  {
+    selectorKey: '',
+    path: '/bg.png',
+    baseTag: 'main',
+    attr: 'style',
+    styleAttr: 'background-image',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'img-logo',
+    path: '/logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'help-up',
+    path: '/help-up.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'logout-hover',
+    path: '/logout-hover.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'logout',
+    path: '/logout.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'home-chat-footer-btn',
+    path: '/send-active.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'home-chat-footer-btn-not',
+    path: '/send.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp1-logo',
+    path: '/temp1-logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp1',
+    path: '/temp1.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp2-logo',
+    path: '/temp2-logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp2',
+    path: '/temp2.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp3-logo',
+    path: '/temp3-logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp3',
+    path: 'https://res.gemcoder.com/gw/temp3.mp4',
+    baseTag: 'video',
+    attr: 'src',
+    basePath: '',
+  },
+  {
+    selectorKey: 'temp4-logo',
+    path: '/temp4-logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp4',
+    path: 'https://res.gemcoder.com/gw/temp4.mp4',
+    baseTag: 'video',
+    attr: 'src',
+    basePath: '',
+  },
+  {
+    selectorKey: 'temp5-logo',
+    path: '/temp5-logo.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'temp5',
+    path: '/temp5.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case1',
+    path: '/case1.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case2',
+    path: '/case2.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case3',
+    path: '/case3.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case4',
+    path: '/case4.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case5',
+    path: '/case5.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case6',
+    path: '/case6.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case7',
+    path: '/case7.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'case8',
+    path: '/case8.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'up-icon',
+    path: '/up.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'down-icon',
+    path: '/down.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'douyin',
+    path: '/douyin.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'douyin-active',
+    path: '/douyin-active.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'xiaohongshu',
+    path: '/xiaohongshu.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'xiaohongshu-active',
+    path: '/xiaohongshu-active.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'zhihu',
+    path: '/zhihu.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'zhihu-active',
+    path: '/zhihu-active.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'bilibili',
+    path: '/bilibili.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'bilibili-active',
+    path: '/bilibili-active.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  },
+  {
+    selectorKey: 'wx',
+    path: 'https://design.gemcoder.com/wx.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: '',
+  },
+  {
+    selectorKey: 'to-top',
+    path: '/to-top.png',
+    baseTag: 'img',
+    attr: 'src',
+    basePath: staticBasePath,
+  }
+]
+// 产品定价模块交互逻辑
+async function initPricingModule() {
+  const pricingToggle = document.querySelector('.pricing-toggle');
+  const toggleOptions = document.querySelectorAll('.toggle-option');
+  const pricingCards = document.querySelector('#pricing-cards');
+  const prevBtn = document.querySelector('#pricing-prev');
+  const nextBtn = document.querySelector('#pricing-next');
+  
+  let currentPeriod = 'month'; // 默认显示月产品
+  let projectsList = await getProjectList();
+  
+  const imgsObj = {
+    '0':'free',    //免费版
+    '2':'basic',   //基础版
+    '3':'professional',  //专业版
+    '50':'company', //企业版
+    '101':'points' // 积分包
+  }
+  
+  // 初始化定价卡片
+  function renderPricingCards(period) {
+    
+    if (!pricingCards) {
+      console.error('找不到定价卡片容器');
+      return;
+    }
+    
+    if (!projectsList[`${period}Projects`]) {
+      console.error(`找不到${period}产品数据`);
+      return;
+    }
+    
+    const projects = projectsList[`${period}Projects`];
+    
+    pricingCards.innerHTML = '';
+    
+    projects.forEach((project, index) => {
+      const card = createPricingCard(project, period, index);
+      pricingCards.appendChild(card);
+    });
+    
+    // 重新绑定事件
+    bindPricingEvents();
+    initToggleBtn();
+  }
+  
+  // 创建定价卡片
+  function createPricingCard(project, period, index) {
+    const card = document.createElement('div');
+    card.className = `pricing-card`;
+    const priceTiers = project.priceTiers;
+    // 根据项目类型生成不同的HTML结构
+    if (priceTiers && priceTiers.length > 1) {
+      // 积分包类型-专业版
+      card.innerHTML = createPointsCardHTML(project, period);
+    } else {
+      // 普通产品类型
+      card.innerHTML = createProductCardHTML(project, period, index);
+    }
+    
+    return card;
+  }
+  
+  // 创建下拉框card
+  function createPointsCardHTML(project, period) {
+    const firstTier = project.priceTiers[0];
+    return `
+      <img src="${staticBasePath}/${imgsObj[project.type]}Bg.png" alt="${project.name}" class="${imgsObj[project.type]}Img price-bg"/>
+      <div class="card-header ${project.type == '101'?'points':''}">
+        <h3>${project.type == '101'? '积分包' : project.name}</h3>
+        ${project.type == '101'?'':`<p class="subtitle">${project.description}</p>`}
+        <div class="points-dropdown price">
+          ${firstTier.discount ? `<div class="discount">
+              <img src="${staticBasePath}/discountBg.png">
+              <p>限时${firstTier.discount * 10}折</p>
+            </div>`:``}
+          <div class="points-dropdown-toggle">
+            <div class="selected-option">
+              <span class="unit">¥</span>
+              <span class="amount">${firstTier.discountedPrice || firstTier.price}</span>
+              ${project.type == '101'?'':`<span class="period">/${period === 'month' ? '月' : '年'}</span>`}
+            </div>
+            <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="points-dropdown-menu">
+            ${project.priceTiers.map((tier, idx) => `
+              <div class="points-dropdown-item ${idx === 0 ? 'selected' : ''}" data-price="${tier.discountedPrice || tier.price}" data-points="${tier.points}">
+                <span class="price">¥<span class="price-num points-dropdown-item-bold">${tier.discountedPrice || tier.price}</span></span>
+                <span class="points"><span class="points-dropdown-item-bold points-num">${tier.points}</span>积分</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="benefits">
+          <div class="benefit-item">
+            <img src="${staticBasePath}/star.png" alt="star.png" class="pricingStar"/>
+            ${project.type == '101'?`
+              <span class="benefit-item-text">立即获得 <span class="benefit-item-text-bold" id="pointNum">${project.points}</span> 积分</span>
+                `:`
+              <span class="benefit-item-text">每${project.resetCycle}赠送 <span class="benefit-item-text-bold" id="pointNum">${project.points}</span> 积分</span>
+            `}
+          </div>
+          <div class="benefit-item">
+            <img src="${staticBasePath}/star.png" alt="star.png" class="pricingStar"/>
+            <span class="benefit-item-text">标准版模型每次生成消耗 <span class="benefit-item-text-bold">2</span> 积分</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-line"></div>
+      <div class="card-body">
+        <div class="features">
+          ${generateFeaturesHTML(project)}
+        </div>
+      </div>
+    `;
+  }
+  
+  // 创建没有下拉框card
+  function createProductCardHTML(project, period, index) {
+    const firstTier = project.priceTiers[0];
+    return `
+    <img src="${staticBasePath}/${imgsObj[project.type]}Bg.png" alt="${project.name}" class="${imgsObj[project.type]}Img price-bg"/>
+      <div class="card-header">
+        <h3>${project.name || project.type}</h3>
+        <p class="subtitle">${project.description || '适合普通用户'}</p>
+        <div class="price">
+          <span class="unit">¥</span>
+          <span class="amount">${firstTier.discountedPrice || firstTier.price}</span>
+          ${project.type == '101'?'':`<span class="period">/${period === 'month' ? '月' : '年'}</span>`}
+          ${firstTier.discount ? `<div class="discount">
+            <img src="${staticBasePath}/discountBg.png">
+            <p>限时${firstTier.discount * 10}折</p>
+          </div>`:``}
+        </div>
+        <div class="benefits">
+          <div class="benefit-item">
+            <img src="${staticBasePath}/star.png" alt="star.png" class="pricingStar"/>
+            ${project.type == '101'?`
+              <span class="benefit-item-text">立即获得 <span class="benefit-item-text-bold" id="pointNum">${project.points}</span> 积分</span>
+                `:`
+              <span class="benefit-item-text">每${project.resetCycle}赠送 <span class="benefit-item-text-bold" id="pointNum">${project.points}</span> 积分</span>
+            `}
+          </div>
+          <div class="benefit-item">
+            <img src="${staticBasePath}/star.png" alt="star.png" class="pricingStar"/>
+            <span class="benefit-item-text">标准版模型每次生成消耗 <span class="benefit-item-text-bold">2</span> 积分</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-line"></div>
+      <div class="card-body">
+        <div class="features">
+          ${generateFeaturesHTML(project)}
+        </div>
+      </div>
+    `;
+  }
+  
+  // 生成特性列表HTML
+  function generateFeaturesHTML(project) {
+    const basicFeatures = [
+      { name: '应用数量', value: '不限' },
+      { name: '页面数量', value: '不限' },
+      { name: '桌面端设计', value: '不限' },
+      { name: '移动端设计', value: '不限' },
+      { name: '积分重置周期', value: project.resetCycle
+      },
+    ]
+    const featuresMap = {
+      '0':[    //免费版
+        { name: '空间管理', value: '✗', excluded: true },
+        { name: '需求文档生成', value: '✓', included: true },
+        { name: '隐藏演示logo', value: '✗', excluded: true }
+      ],
+      '2':[   //基础版
+        { name: '空间管理', value: '✗', excluded: true },
+        { name: '需求文档生成', value: '✓', included: true },
+        { name: '隐藏演示logo', value: '✓', included: true }
+      ],
+      '3':[   //专业版
+        { name: '空间管理', value: '✗', excluded: true },
+        { name: '需求文档生成', value: '✓', included: true },
+        { name: '隐藏演示logo', value: '✓', included: true }
+      ],
+      '50':[   //企业版
+        { name: '空间管理', value: '✓', included: true },
+        { name: '需求文档生成', value: '✓', included: true },
+        { name: '隐藏演示logo', value: '✓', included: true }
+      ],
+      '101':[   //积分包
+        { name: '任意会员购买', value: '✓', included: true },
+        { name: '可重复购买', value: '✓', included: true },
+        { name: '积分永久有效', value: '✓', included: true }
+      ],
+    }
+    let features = []
+    if(project.type == '101'){
+      features = featuresMap[project.type]
+    }else{
+      features = basicFeatures.concat(featuresMap[project.type])
+    }
+    return features.map(feature => {
+      if (feature.excluded) {
+        return `
+          <div class="feature-item">
+            <span class="feature-name">${feature.name}</span>
+            <span class="feature-status excluded">${feature.value}</span>
+          </div>
+        `;
+      } else if (feature.included) {
+        return `
+          <div class="feature-item">
+            <span class="feature-name">${feature.name}</span>
+            <img src="${staticBasePath}/success.png" alt="success.png" class="priceSuccess feature-item-img"/>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="feature-item">
+            <span class="feature-name">${feature.name}</span>
+            <span class="feature-name">${feature.value}</span>
+          </div>
+        `;
+      }
+    }).join('');
+  }
+  
+  // 绑定定价相关事件
+  function bindPricingEvents() {
+    // 积分包下拉框交互
+    const pointsDropdowns = document.querySelectorAll('.points-dropdown');
+    pointsDropdowns.forEach(dropdown => {
+      const toggle = dropdown.querySelector('.points-dropdown-toggle');
+      const menu = dropdown.querySelector('.points-dropdown-menu');
+      const items = dropdown.querySelectorAll('.points-dropdown-item');
+      const parentDom = dropdown.parentNode
+      
+      // 切换下拉框显示/隐藏
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle.classList.toggle('active');
+        menu.classList.toggle('show');
+      });
+      
+      // 选择选项
+      items.forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          
+          // 移除所有选中状态
+          items.forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          
+          // 更新显示的内容
+          const price = item.querySelector('.price-num').textContent;
+          const points = item.querySelector('.points-num').textContent;
+          const selectedOption = toggle.querySelector('.selected-option');
+          selectedOption.querySelector('.amount').textContent = price;
+
+          const pointDom = parentDom.querySelector('#pointNum')
+          pointDom.textContent = points
+          
+          // 关闭下拉框
+          toggle.classList.remove('active');
+          menu.classList.remove('show');
+        });
+      });
+      
+      // 点击外部关闭下拉框
+      document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target)) {
+          toggle.classList.remove('active');
+          menu.classList.remove('show');
+        }
+      });
+    });
+  }
+  
+  // 定价切换逻辑
+  if (pricingToggle) {
+    pricingToggle.addEventListener('click', (e) => {
+      const target = e.target.closest('.toggle-option');
+      if (!target) return;
+      
+      const period = target.dataset.period;
+      if (period === currentPeriod) return;
+      
+      // 更新切换状态
+      toggleOptions.forEach(option => option.classList.remove('active'));
+      target.classList.add('active');
+      
+      // 重新渲染定价卡片
+      renderPricingCards(period);
+      currentPeriod = period;
+    });
+  }
+  function initToggleBtn(){
+    // 导航按钮逻辑
+    if (prevBtn && nextBtn && pricingCards) {
+      // 计算每次滑动的距离（一个卡片的宽度 + 间距）
+      const cardWidth = 330 + 30; // 卡片宽度 + 间距
+      
+      // 防抖函数，避免快速点击
+      let isScrolling = false;
+      
+      function updateButtonStates() {
+        const currentScroll = pricingCards.scrollLeft;
+        const maxScroll = pricingCards.scrollWidth - pricingCards.clientWidth;
+        
+        // 更新按钮状态
+        prevBtn.disabled = currentScroll <= 0;
+        nextBtn.disabled = currentScroll >= maxScroll;
+        
+        // 更新滑动指示器
+        if (maxScroll > 0) {
+          pricingCards.classList.add('has-more');
+        } else {
+          pricingCards.classList.remove('has-more');
+        }
+      }
+      
+      prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (isScrolling) return;
+        
+        const currentScroll = pricingCards.scrollLeft;
+        const newScroll = Math.max(0, currentScroll - cardWidth);
+        
+        if (newScroll === currentScroll) return;
+        
+        isScrolling = true;
+        
+        pricingCards.scrollTo({
+          left: newScroll,
+          behavior: 'smooth'
+        });
+        
+        // 添加点击动画效果
+        prevBtn.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          prevBtn.style.transform = '';
+        }, 150);
+        
+        // 滚动完成后重置状态
+        setTimeout(() => {
+          isScrolling = false;
+        }, 500);
+      });
+      
+      nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (isScrolling) return;
+        
+        const currentScroll = pricingCards.scrollLeft;
+        const maxScroll = pricingCards.scrollWidth - pricingCards.clientWidth;
+        const newScroll = Math.min(maxScroll, currentScroll + cardWidth);
+        
+        if (newScroll === currentScroll) return;
+        
+        isScrolling = true;
+        
+        pricingCards.scrollTo({
+          left: newScroll,
+          behavior: 'smooth'
+        });
+        
+        // 添加点击动画效果
+        nextBtn.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          nextBtn.style.transform = '';
+        }, 150);
+        
+        // 滚动完成后重置状态
+        setTimeout(() => {
+          isScrolling = false;
+        }, 500);
+      });
+      
+      // 监听滚动事件，更新按钮状态
+      let scrollTimeout;
+      pricingCards.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          updateButtonStates();
+        }, 100);
+      });
+      
+      // 添加触摸支持
+      let startX = 0;
+      let startScrollLeft = 0;
+      
+      pricingCards.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].pageX;
+        startScrollLeft = pricingCards.scrollLeft;
+      });
+      
+      pricingCards.addEventListener('touchmove', (e) => {
+        if (!startX) return;
+        
+        const x = e.touches[0].pageX;
+        const walk = (startX - x) * 2;
+        pricingCards.scrollLeft = startScrollLeft + walk;
+      });
+      
+      pricingCards.addEventListener('touchend', () => {
+        startX = 0;
+      });
+      // 添加键盘导航支持
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' && !prevBtn.disabled) {
+          prevBtn.click();
+        } else if (e.key === 'ArrowRight' && !nextBtn.disabled) {
+          nextBtn.click();
+        }
+      });
+      // 初始化按钮状态
+      updateButtonStates();
+    }
+  }
+  renderPricingCards(currentPeriod);
+}
+
+function loadStaticSources() {
+  staticSources.forEach(item => {
+    const doms = item.selectorKey && document.querySelectorAll(`${item.baseTag}[class~="${item.selectorKey}"]`) || document.querySelectorAll(item.baseTag)
+    doms.forEach(dom => {
+      if(item.attr === 'style'){
+        if(!dom[item.attr]) {
+          dom[item.attr] = {}
+        }
+        dom[item.attr][item.styleAttr] = ` url("${item.basePath}${item.path}")`
+        return
+      }
+      dom[item.attr] = `${item.basePath}${item.path}`
+    })
+  })
+}
+
+async function getProjectList(){
+  let url = `${window.location.origin}/api/pointsPackage/getList`;
+  const data = await axios.get(url)
+  if(data.data.flag == true || data.data.flag == 'true'){
+    const projectsList = data.data.data || []
+    // 月产品
+    let monthProjectsArr = projectsList.filter(item => item.timeType == "月")
+    // 年产品
+    const yearProjectsArr = projectsList.filter(item => item.timeType == "年")
+    // 积分包
+    const pointsProjectsArr = projectsList.filter(item => item.pointType == 2)
+    let monthProjects = transformPricingData(monthProjectsArr)
+    let yearProjects = transformPricingData(yearProjectsArr)
+    const pointsProjects = transformPricingData(pointsProjectsArr)
+    monthProjects = monthProjects.concat(pointsProjects).sort((a,b)=>parseFloat(a.type) - parseFloat(b.type))
+    yearProjects = yearProjects.concat(pointsProjects).sort((a,b)=>parseFloat(a.type) - parseFloat(b.type))
+    yearProjects.unshift(monthProjects[0])
+    return {monthProjects,yearProjects}
+  }
+  return {}
+}
+
+function transformPricingData(originalData) {
+  const result = [];
+  const typeMap = new Map();
+  
+  // 先按 type 分类
+  originalData.forEach(item => {
+    if (!typeMap.has(item.type)) {
+      typeMap.set(item.type, []);
+    }
+    typeMap.get(item.type).push(item);
+  });
+  
+  // 处理每个类型
+  typeMap.forEach((items, type) => {
+    if (items.length === 0) return;
+    
+    const firstItem = items[0];
+    const transformedItem = {
+      ...firstItem,
+      priceTiers: items.map(item => ({
+        price: item.price,
+        points: item.points,  // 修正了拼写错误 (原代码是 pooints)
+        discountedPrice: item.discountedPrice,
+        discount: item.discount
+      }))
+    };
+    
+    // 如果只有一种价格，也保留 priceTiers 结构
+    result.push(transformedItem);
+  });
+  
+  return result;
+}

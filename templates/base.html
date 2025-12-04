@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}政企智能舆情分析系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f2f2f2;
+        }
+        .layui-layout-admin .layui-header {
+            background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+        }
+        .layui-layout-admin .layui-logo {
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .layui-side {
+            background-color: #2f4050;
+        }
+        .layui-nav-tree {
+            background-color: #2f4050;
+        }
+        .layui-nav-tree .layui-nav-item a {
+            color: #a7b1c2;
+        }
+        .layui-nav-tree .layui-nav-itemed>a, .layui-nav-tree .layui-nav-item>a:hover {
+            background-color: #293846;
+            color: white;
+        }
+        .layui-nav-tree .layui-this {
+            background-color: #1890ff;
+        }
+        .layui-nav-tree .layui-this>a, .layui-nav-tree .layui-this>a:hover {
+            background-color: #1890ff;
+            color: white;
+        }
+        .user-info {
+            color: white;
+            padding: 0 15px;
+        }
+        .user-info .layui-icon {
+            margin-right: 5px;
+        }
+        .main-content {
+            padding: 20px;
+            min-height: calc(100vh - 60px);
+        }
+        .stat-card {
+            background: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .stat-card .label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body class="layui-layout-body">
+    <div class="layui-layout layui-layout-admin">
+        <!-- 头部 -->
+        <div class="layui-header">
+            <div class="layui-logo">政企智能舆情分析系统</div>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item">
+                    <a href="javascript:;">
+                        <i class="layui-icon layui-icon-user"></i>
+                        {{ current_user.username }}
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="{{ url_for('logout') }}"><i class="layui-icon layui-icon-logout"></i> 退出</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 侧边栏 -->
+        <div class="layui-side layui-bg-black">
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="test">
+                    <li class="layui-nav-item">
+                        <a href="{{ url_for('dashboard') }}"><i class="layui-icon layui-icon-home"></i> 仪表板</a>
+                    </li>
+                    <li class="layui-nav-item">
+                        <a href="{{ url_for('opinion_reports') }}"><i class="layui-icon layui-icon-read"></i> 舆情报告</a>
+                    </li>
+                    <li class="layui-nav-item">
+                        <a href="{{ url_for('generate_opinion_report') }}"><i class="layui-icon layui-icon-edit"></i> 生成报告</a>
+                    </li>
+                    {% if current_user.is_admin() %}
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a href="javascript:;"><i class="layui-icon layui-icon-set"></i> 系统管理</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="{{ url_for('admin_users') }}"><i class="layui-icon layui-icon-user"></i> 用户管理</a></dd>
+                            <dd><a href="{{ url_for('admin_settings') }}"><i class="layui-icon layui-icon-set"></i> 系统设置</a></dd>
+                        </dl>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="layui-body">
+            <div class="main-content">
+                <!-- 消息提示 -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="layui-elem-quote layui-quote-nm" style="margin-bottom: 20px; border-left-color: {{ '#5FB878' if category == 'success' else '#FF5722' }};">
+                                <i class="layui-icon {{ 'layui-icon-ok' if category == 'success' else 'layui-icon-close' }}"></i>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <!-- 底部 -->
+        <div class="layui-footer" style="text-align: center;">
+            © 2024 政企智能舆情分析系统 | 技术支持
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['element', 'layer'], function(){
+                var element = layui.element;
+                var layer = layui.layer;
+                
+                // 页面加载完成后初始化
+                element.init();
+            });
+        });
+    </script>
+</body>
+</html>

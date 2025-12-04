@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 政企智能舆情分析系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .register-container {
+            width: 450px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .register-header {
+            background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .register-header h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 300;
+        }
+        .register-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .register-body {
+            padding: 30px;
+        }
+        .register-footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .login-link a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <div class="logo">📊</div>
+            <h2>用户注册</h2>
+            <p>政企智能舆情分析系统</p>
+        </div>
+        
+        <div class="register-body">
+            <form class="layui-form" method="post">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">用户名</label>
+                    <div class="layui-input-block">
+                        <input type="text" name="username" required lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                
+                <div class="layui-form-item">
+                    <label class="layui-form-label">密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="password" required lay-verify="required" placeholder="请输入密码（至少6位）" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                
+                <div class="layui-form-item">
+                    <label class="layui-form-label">确认密码</label>
+                    <div class="layui-input-block">
+                        <input type="password" name="confirm_password" required lay-verify="required" placeholder="请再次输入密码" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="registerForm">注册</button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="login-link">
+                已有账号？<a href="{{ url_for('login') }}">立即登录</a>
+            </div>
+        </div>
+        
+        <div class="register-footer">
+            © 2024 政企智能舆情分析系统 | 技术支持
+        </div>
+    </div>
+    
+    <script>
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const eyeIcon = document.querySelector(`#${fieldId} + .password-toggle i`);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+        
+        // 表单提交处理
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const confirmPassword = document.getElementById('confirm_password').value.trim();
+            
+            // 基本验证
+            if (!username) {
+                e.preventDefault();
+                alert('请输入用户名');
+                return;
+            }
+            
+            if (!password) {
+                e.preventDefault();
+                alert('请输入密码');
+                return;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('密码长度至少为6位');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('两次输入的密码不一致');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = document.querySelector('.register-btn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...';
+            submitBtn.disabled = true;
+            
+            // 3秒后恢复按钮状态（防止无限等待）
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 3000);
+        });
+        
+        // 页面加载完成后的动画效果
+        document.addEventListener('DOMContentLoaded', function() {
+            const registerContainer = document.querySelector('.register-container');
+            registerContainer.style.opacity = '0';
+            registerContainer.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                registerContainer.style.transition = 'all 0.6s ease';
+                registerContainer.style.opacity = '1';
+                registerContainer.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // 自动聚焦用户名输入框
+            document.getElementById('username').focus();
+        });
+    </script>
+</body>
+</html>    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script>
+        // 等待layui库加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof layui === 'undefined') {
+                console.error('layui库未正确加载');
+                return;
+            }
+            
+            layui.use(['form', 'layer'], function(){
+                var form = layui.form;
+                var layer = layui.layer;
+                
+                // 自定义验证规则
+                form.verify({
+                    password: function(value) {
+                        if(value.length < 6) {
+                            return '密码长度至少6位';
+                        }
+                    }
+                });
+                
+                // 表单提交
+                form.on('submit(registerForm)', function(data){
+                    // 验证密码一致性
+                    var password = document.querySelector('input[name="password"]').value;
+                    var confirmPassword = document.querySelector('input[name="confirm_password"]').value;
+                    
+                    if (password !== confirmPassword) {
+                        layer.msg('两次输入的密码不一致', {icon: 2});
+                        return false;
+                    }
+                    
+                    // 这里表单会自动提交到后端
+                    return true;
+                });
+                
+                // 显示错误消息
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            layer.msg('{{ message }}', {icon: {{ 1 if category == 'success' else 2 }}});
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            });
+        });
+    </script>
+</body>
+</html>
